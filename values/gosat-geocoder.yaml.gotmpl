@@ -1,0 +1,41 @@
+image:
+  repository: {{ .Values | get "registry" "localhost:5000" }}/gosat-geocoder
+  tag: {{ .Values | get "imageTag" "latest" }}
+  pullPolicy: {{ .Values | get "imagePullPolicy" "IfNotPresent" }}
+
+service:
+  port: 6003
+
+envFrom:
+  - secretRef:
+      name: gosat-geocoder-secrets
+
+env:
+  - name: NODE_ENV
+    value: production
+  - name: PORT
+    value: "6003"
+  - name: MONGODB_URL
+    value: mongodb://gosat:{{ .Values | get "mongodb.auth.password" "gosat" }}@mongodb-svc.gosat.svc.cluster.local:27017/gosat?authSource=admin
+  - name: MONGODB_DATABASE
+    value: gosat
+  - name: MONGODB_COLLECTION
+    value: addresses
+  - name: REDIS_URL
+    value: redis://redis.gosat.svc.cluster.local:6379
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: {{ .Values | get "domain" "gosat.local" }}
+      paths:
+        - path: /geocoder
+          pathType: Prefix
+
+resources:
+  limits:
+    memory: 256Mi
+    cpu: 200m
+  requests:
+    memory: 64Mi
+    cpu: 50m

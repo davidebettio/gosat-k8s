@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1.7
+# Generic multi-stage Dockerfile for GoSat Node.js/TypeScript services.
+# Build arg SERVICE_DIR specifies which subproject to build (e.g., gosat-api).
+#
+# Usage:
+#   docker build -f gosat-k8s/dockerfiles/Dockerfile.node \
+#     --build-arg SERVICE_DIR=gosat-api \
+#     -t gosat-api:latest .
+
+ARG NODE_VERSION=22-alpine
+
+# ─── Stage 1: install + build ────────────────────────────────────────────────
+FROM node:${NODE_VERSION} AS builder
+ARG SERVICE_DIR
+WORKDIR /app
+
+COPY ${SERVICE_DIR}/package.json ${SERVICE_DIR}/yarn.lock* ${SERVICE_DIR}/.yarnrc* ./
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked \
+    corepack enable && yarn install --frozen-lockfile --production=false
+
+COPY ${SERVICE_DIR}/tsconfig.json ./
+COPY ${SERVICE_DIR}/src ./src
+RUN yarn build
+
+# ─── Stage 2: production image ───────────────────────────────────────────────
+FROM node:${NODE_VERSION}
+ARG SERVICE_DIR
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --from=builder /app/package.json /app/yarn.lock* ./
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked \
+    corepack enable && yarn install --frozen-lockfile --production=true
+
+COPY --from=builder /app/dist ./dist
+
+# Copy runtime assets if they exist.
+# The glob bracket trick (e.g. "template[s]") matches the dir when present
+# but produces zero matches (no error) when absent.
+COPY ${SERVICE_DIR}/src/template[s] ./src/templates/
+COPY ${SERVICE_DIR}/src/cert[s] ./src/certs/
+COPY ${SERVICE_DIR}/src/dat[a] ./src/data/
+
+USER node
+CMD ["node", "dist/index.js"]

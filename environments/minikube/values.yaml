@@ -1,0 +1,60 @@
+# ─── Minikube / Local development ─────────────────────────────────────────────
+
+# Per minikube: le immagini vengono buildate dentro il docker di minikube
+# con `eval $(minikube docker-env) && ./build.sh --dev`
+# imagePullPolicy Never evita pull da registri esterni.
+registry: gosat
+imageTag: latest
+imagePullPolicy: Never
+domain: gosat.local
+
+# TLS disabled for local dev
+tls:
+  enabled: false
+
+# Ingress: disabled here, use minikube addon instead:
+#   minikube addons enable ingress
+ingress:
+  enabled: false
+  serviceType: NodePort
+
+# gosat-server: NodePort to expose TCP on host
+gosat-server:
+  serviceType: NodePort
+
+# Infrastructure: minimal resources (all operators use arm64 native images)
+mongodb:
+  replicaCount: 1
+  version: "7.0.20"
+  auth:
+    enabled: false
+  persistence:
+    size: 5Gi
+    storageClass: standard
+  resources:
+    memory: 512Mi
+    cpu: 250m
+
+redis:
+  persistence:
+    size: 1Gi
+
+rabbitmq:
+  password: gosat
+  persistence:
+    size: 1Gi
+
+opensearch:
+  version: "2.19.1"
+  master:
+    replicaCount: 1
+  data:
+    replicaCount: 0
+  persistence:
+    size: 5Gi
+    storageClass: standard
+  resources:
+    memory: 512Mi
+    cpu: 250m
+  dashboards:
+    enabled: false

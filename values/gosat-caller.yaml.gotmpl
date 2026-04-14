@@ -1,0 +1,28 @@
+image:
+  repository: {{ .Values | get "registry" "localhost:5000" }}/gosat-caller
+  tag: {{ .Values | get "imageTag" "latest" }}
+  pullPolicy: {{ .Values | get "imagePullPolicy" "IfNotPresent" }}
+
+service:
+  port: 3000
+
+envFrom:
+  - secretRef:
+      name: gosat-caller-secrets
+
+env:
+  - name: NODE_ENV
+    value: production
+  - name: PORT
+    value: "3000"
+  - name: MONGODB_URL
+    value: mongodb://gosat:{{ .Values | get "mongodb.auth.password" "gosat" }}@mongodb-svc.gosat.svc.cluster.local:27017/gosat?replicaSet=mongodb&authSource=admin
+  - name: RABBITMQ_URL
+    value: amqp://gosat:{{ .Values | get "rabbitmq.password" "gosat" }}@rabbitmq.gosat.svc.cluster.local:5672/
+resources:
+  limits:
+    memory: 256Mi
+    cpu: 200m
+  requests:
+    memory: 64Mi
+    cpu: 50m

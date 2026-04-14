@@ -1,0 +1,6 @@
+# Secrets con valori reali — MAI committare
+secrets.yaml
+*-secrets.yaml
+
+# Helmfile state
+.helmfile/

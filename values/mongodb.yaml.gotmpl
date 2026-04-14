@@ -1,0 +1,19 @@
+replicaSetName: rs0
+members: {{ .Values | get "mongodb.replicaCount" 1 }}
+version: {{ .Values | get "mongodb.version" "8.0.0" | quote }}
+
+auth:
+  enabled: {{ .Values | get "mongodb.auth.enabled" false }}
+  password: {{ .Values | get "mongodb.auth.password" "gosat" }}
+
+persistence:
+  size: {{ .Values | get "mongodb.persistence.size" "10Gi" }}
+  storageClass: {{ .Values | get "mongodb.persistence.storageClass" "" | quote }}
+
+resources:
+  limits:
+    memory: {{ .Values | get "mongodb.resources.memory" "1Gi" }}
+    cpu: {{ .Values | get "mongodb.resources.cpu" "500m" }}
+  requests:
+    memory: 256Mi
+    cpu: 100m

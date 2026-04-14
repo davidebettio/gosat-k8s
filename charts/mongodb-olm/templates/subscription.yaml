@@ -1,0 +1,10 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: mongodb-kubernetes
+  namespace: operators
+spec:
+  channel: {{ .Values.channel }}
+  name: mongodb-kubernetes
+  source: {{ .Values.source }}
+  sourceNamespace: {{ .Values.sourceNamespace }}

@@ -1,0 +1,46 @@
+# OpenSearch cluster via opensearch-k8s-operator
+# Image: opensearchproject/opensearch (arm64 native)
+
+cluster:
+  name: opensearch
+  general:
+    image: docker.io/opensearchproject/opensearch
+    version: {{ .Values | get "opensearch.version" "2.19.1" | quote }}
+    httpPort: 9200
+    serviceName: opensearch
+  dashboards:
+    enable: {{ .Values | get "opensearch.dashboards.enabled" false }}
+    version: {{ .Values | get "opensearch.version" "2.19.1" | quote }}
+    replicas: 1
+    tls:
+      enable: false
+      secret: {}
+    resources:
+      limits:
+        memory: 512Mi
+        cpu: 500m
+      requests:
+        memory: 256Mi
+        cpu: 100m
+  nodePools:
+    - component: masters
+      replicas: {{ .Values | get "opensearch.master.replicaCount" 1 }}
+      diskSize: {{ .Values | get "opensearch.persistence.size" "10Gi" | quote }}
+      roles:
+        - cluster_manager
+        - data
+        - ingest
+      resources:
+        limits:
+          memory: {{ .Values | get "opensearch.resources.memory" "1Gi" }}
+          cpu: {{ .Values | get "opensearch.resources.cpu" "500m" }}
+        requests:
+          memory: 512Mi
+          cpu: 100m
+      jvm: {{ .Values | get "opensearch.jvm" "-Xms512m -Xmx512m" | quote }}
+      env:
+        - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: opensearch-admin-password
+              key: password

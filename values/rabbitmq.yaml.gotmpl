@@ -1,0 +1,20 @@
+# RabbitmqCluster via rabbitmq/cluster-operator
+# Image: rabbitmq (arm64 native)
+
+replicas: {{ .Values | get "rabbitmq.replicas" 1 }}
+
+auth:
+  username: {{ .Values | get "rabbitmq.username" "gosat" }}
+  password: {{ .Values | get "rabbitmq.password" "gosat" }}
+
+persistence:
+  size: {{ .Values | get "rabbitmq.persistence.size" "2Gi" }}
+  storageClass: {{ .Values | get "rabbitmq.persistence.storageClass" "" | quote }}
+
+resources:
+  limits:
+    memory: {{ .Values | get "rabbitmq.resources.memory" "512Mi" }}
+    cpu: {{ .Values | get "rabbitmq.resources.cpu" "500m" }}
+  requests:
+    memory: 128Mi
+    cpu: 100m

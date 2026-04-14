@@ -1,0 +1,64 @@
+image:
+  repository: {{ .Values | get "registry" "localhost:5000" }}/gosat-api
+  tag: {{ .Values | get "imageTag" "latest" }}
+  pullPolicy: {{ .Values | get "imagePullPolicy" "IfNotPresent" }}
+
+service:
+  port: 6001
+
+envFrom:
+  - secretRef:
+      name: gosat-api-secrets
+
+env:
+  - name: NODE_ENV
+    value: production
+  - name: PORT
+    value: "6001"
+  - name: MONGODB_URL
+    value: mongodb://gosat:{{ .Values | get "mongodb.auth.password" "gosat" }}@mongodb-svc.gosat.svc.cluster.local:27017/gosat?replicaSet=mongodb&authSource=admin
+  - name: REDIS_URL
+    value: redis://redis.gosat.svc.cluster.local:6379
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: {{ .Values | get "domain" "gosat.local" }}
+      paths:
+        - path: /api
+          pathType: Prefix
+        - path: /socket.io
+          pathType: Prefix
+  {{- if .Values | get "tls.enabled" false }}
+  tls:
+    - secretName: gosat-tls
+      hosts:
+        - {{ .Values | get "domain" "gosat.local" }}
+  {{- end }}
+
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /live
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 30
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+resources:
+  limits:
+    memory: 1Gi
+    cpu: "1"
+  requests:
+    memory: 256Mi
+    cpu: 200m

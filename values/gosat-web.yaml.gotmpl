@@ -1,0 +1,49 @@
+image:
+  repository: {{ .Values | get "registry" "localhost:5000" }}/gosat-web
+  tag: {{ .Values | get "imageTag" "latest" }}
+  pullPolicy: {{ .Values | get "imagePullPolicy" "IfNotPresent" }}
+
+service:
+  port: 80
+
+# nginx serves /: probes hit / (200) to avoid adding custom locations.
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 30
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: {{ .Values | get "domain" "gosat.local" }}
+      paths:
+        - path: /
+          pathType: Prefix
+  {{- if .Values | get "tls.enabled" false }}
+  tls:
+    - secretName: gosat-tls
+      hosts:
+        - {{ .Values | get "domain" "gosat.local" }}
+  {{- end }}
+
+resources:
+  limits:
+    memory: 128Mi
+    cpu: 100m
+  requests:
+    memory: 64Mi
+    cpu: 50m

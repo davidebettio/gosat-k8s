@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mongodb-community
+description: MongoDBCommunity custom resource for the MongoDB Kubernetes Operator
+type: application
+version: 0.1.0
+appVersion: "8.0"

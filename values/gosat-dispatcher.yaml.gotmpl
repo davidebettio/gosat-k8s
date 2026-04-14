@@ -1,0 +1,44 @@
+image:
+  repository: {{ .Values | get "registry" "localhost:5000" }}/gosat-dispatcher
+  tag: {{ .Values | get "imageTag" "latest" }}
+  pullPolicy: {{ .Values | get "imagePullPolicy" "IfNotPresent" }}
+
+headless: false
+service:
+  enabled: true
+  port: 6002
+
+envFrom:
+  - secretRef:
+      name: gosat-dispatcher-secrets
+
+env:
+  - name: NODE_ENV
+    value: production
+  - name: PORT
+    value: "6002"
+  - name: MONGODB_URL
+    value: mongodb://gosat:{{ .Values | get "mongodb.auth.password" "gosat" }}@mongodb-svc.gosat.svc.cluster.local:27017/gosat?replicaSet=mongodb&authSource=admin
+  - name: REDIS_URL
+    value: redis://redis.gosat.svc.cluster.local:6379
+  - name: RABBITMQ_URL
+    value: amqp://gosat:{{ .Values | get "rabbitmq.password" "gosat" }}@rabbitmq.gosat.svc.cluster.local:5672/
+  - name: RABBITMQ_EVENTS_QUEUE
+    value: events
+  - name: RABBITMQ_EVENTS_EXCHANGE
+    value: events
+  - name: RABBITMQ_EVENTS_DEAD_LETTER_QUEUE
+    value: events-dead-letter
+  - name: RABBITMQ_EVENTS_DEAD_LETTER_EXCHANGE
+    value: events-dead-letter
+  - name: RABBITMQ_SMS_EXCHANGE
+    value: sms
+  - name: RABBITMQ_CALLS_EXCHANGE
+    value: calls
+resources:
+  limits:
+    memory: 512Mi
+    cpu: 500m
+  requests:
+    memory: 128Mi
+    cpu: 100m

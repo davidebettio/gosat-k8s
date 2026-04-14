@@ -1,0 +1,24 @@
+image:
+  repository: {{ .Values | get "registry" "localhost:5000" }}/gosat-telegram-bot
+  tag: {{ .Values | get "imageTag" "latest" }}
+  pullPolicy: {{ .Values | get "imagePullPolicy" "IfNotPresent" }}
+
+service:
+  port: 6006
+
+envFrom:
+  - secretRef:
+      name: gosat-telegram-bot-secrets
+
+env:
+  - name: NODE_ENV
+    value: production
+  - name: PORT
+    value: "6006"
+resources:
+  limits:
+    memory: 128Mi
+    cpu: 100m
+  requests:
+    memory: 32Mi
+    cpu: 25m

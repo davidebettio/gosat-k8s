@@ -1,0 +1,72 @@
+# Default values for gosat-service chart
+
+replicaCount: 1
+
+image:
+  repository: ""
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8001
+  # For TCP services like gosat-server
+  nodePort: null
+
+# For gosat-server TCP traffic
+hostPort:
+  enabled: false
+  port: 30060
+
+# Optional separate HTTP port for liveness/readiness probes.
+# Used when the main port is not HTTP (e.g. gosat-server TCP).
+healthPort: null
+
+env: []
+# - name: NODE_ENV
+#   value: "production"
+
+envFrom: []
+# - secretRef:
+#     name: gosat-api-secrets
+
+resources:
+  limits:
+    memory: 512Mi
+    cpu: 500m
+  requests:
+    memory: 128Mi
+    cpu: 100m
+
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /live
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 30
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts: []
+  tls: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# For services that don't listen on a port (dispatcher, caller)
+headless: false

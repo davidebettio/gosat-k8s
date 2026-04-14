@@ -1,0 +1,47 @@
+image:
+  repository: {{ .Values | get "registry" "localhost:5000" }}/gosat-server
+  tag: {{ .Values | get "imageTag" "latest" }}
+  pullPolicy: {{ .Values | get "imagePullPolicy" "IfNotPresent" }}
+
+service:
+  port: 30060
+  type: {{ .Values | get "gosat-server.serviceType" "ClusterIP" }}
+
+healthPort: 8080
+
+envFrom:
+  - secretRef:
+      name: gosat-server-secrets
+
+env:
+  - name: HOST
+    value: "0.0.0.0"
+  - name: PORT
+    value: "30060"
+  - name: HEALTH_PORT
+    value: "8080"
+  - name: ENVIRONMENT
+    value: production
+  - name: RABBITMQ_URL
+    value: amqp://gosat:{{ .Values | get "rabbitmq.password" "gosat" }}@rabbitmq.gosat.svc.cluster.local:5672/
+  - name: RABBITMQ_EVENTS_QUEUE
+    value: events
+  - name: RABBITMQ_EVENTS_EXCHANGE
+    value: events
+  - name: RABBITMQ_EVENTS_DEADLETTER_QUEUE
+    value: events-dead-letter
+  - name: RABBITMQ_EVENTS_DEADLETTER_EXCHANGE
+    value: events-dead-letter
+  - name: API_BASE_URL
+    value: http://gosat-api.gosat.svc.cluster.local:6001/api/v1
+  - name: API_USER
+    value: admin
+  - name: LOG_ENABLED
+    value: "false"
+resources:
+  limits:
+    memory: 256Mi
+    cpu: 500m
+  requests:
+    memory: 64Mi
+    cpu: 100m

@@ -1,0 +1,55 @@
+# ─── DigitalOcean Production ──────────────────────────────────────────────────
+
+# DigitalOcean Container Registry
+registry: registry.digitalocean.com/gosat
+imageTag: latest
+domain: web.gosat.it
+
+# TLS via cert-manager / Let's Encrypt
+tls:
+  enabled: true
+
+# Ingress: DigitalOcean LoadBalancer
+ingress:
+  enabled: true
+  serviceType: LoadBalancer
+
+# gosat-server: traffic arrives via ingress-nginx TCP proxy
+gosat-server:
+  serviceType: ClusterIP
+
+# Infrastructure: production sizing
+mongodb:
+  replicaCount: 3
+  version: "8.0.0"
+  auth:
+    enabled: true
+  persistence:
+    size: 100Gi
+    storageClass: do-block-storage
+  resources:
+    memory: 4Gi
+    cpu: "2"
+
+redis:
+  persistence:
+    size: 5Gi
+
+rabbitmq:
+  password: "" # Set via HELMFILE_RABBITMQ_PASSWORD or sealed secret
+  persistence:
+    size: 10Gi
+
+opensearch:
+  version: "2.19.1"
+  master:
+    replicaCount: 1
+  persistence:
+    size: 50Gi
+    storageClass: do-block-storage
+  resources:
+    memory: 2Gi
+    cpu: "1"
+  jvm: "-Xms1g -Xmx1g"
+  dashboards:
+    enabled: true

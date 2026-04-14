@@ -1,0 +1,17 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rabbitmq
+spec:
+  replicas: {{ .Values.replicas }}
+  resources:
+    {{- toYaml .Values.resources | nindent 4 }}
+  persistence:
+    {{- if .Values.persistence.storageClass }}
+    storageClassName: {{ .Values.persistence.storageClass | quote }}
+    {{- end }}
+    storage: {{ .Values.persistence.size | quote }}
+  rabbitmq:
+    additionalConfig: |
+      default_user = {{ .Values.auth.username }}
+      default_pass = {{ .Values.auth.password }}

@@ -1,0 +1,19 @@
+replicaSetName: rs0
+members: 1
+version: "8.0.0"
+
+auth:
+  enabled: false
+  password: gosat
+
+persistence:
+  size: 10Gi
+  storageClass: ""
+
+resources:
+  limits:
+    memory: 1Gi
+    cpu: 500m
+  requests:
+    memory: 256Mi
+    cpu: 100m

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mongodb-olm
+description: Installs MongoDB Kubernetes operator via OLM Subscription
+type: application
+version: 0.1.0
+appVersion: "1.8.0"

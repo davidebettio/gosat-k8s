@@ -1,0 +1,19 @@
+# Valkey — Redis-compatible, arm64 native
+fullnameOverride: redis
+
+service:
+  type: ClusterIP
+  port: 6379
+
+persistence:
+  enabled: true
+  size: {{ .Values | get "redis.persistence.size" "1Gi" }}
+  storageClass: {{ .Values | get "redis.persistence.storageClass" "" | quote }}
+
+resources:
+  limits:
+    memory: {{ .Values | get "redis.resources.memory" "256Mi" }}
+    cpu: {{ .Values | get "redis.resources.cpu" "200m" }}
+  requests:
+    memory: 64Mi
+    cpu: 50m
