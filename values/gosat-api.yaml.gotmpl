@@ -25,6 +25,9 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    {{- if .Values | get "tls.enabled" false }}
+    cert-manager.io/cluster-issuer: {{ .Values | get "tls.clusterIssuer" "letsencrypt-prod" }}
+    {{- end }}
   hosts:
     - host: {{ .Values | get "domain" "gosat.local" }}
       paths:
@@ -58,7 +61,7 @@ readinessProbe:
 resources:
   limits:
     memory: 1Gi
-    cpu: "1"
+    cpu: 500m
   requests:
     memory: 256Mi
-    cpu: 200m
+    cpu: 100m

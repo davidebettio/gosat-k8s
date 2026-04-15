@@ -2,8 +2,8 @@
 
 # DigitalOcean Container Registry
 registry: registry.digitalocean.com/gosat
-imageTag: latest
-domain: web.gosat.it
+imageTag: v0.0.1
+domain: beta.gosat.it
 
 # TLS via cert-manager / Let's Encrypt
 tls:
@@ -36,20 +36,20 @@ redis:
     size: 5Gi
 
 rabbitmq:
-  password: "" # Set via HELMFILE_RABBITMQ_PASSWORD or sealed secret
+  password: "gosat-prod-ZxQ8vT7Rm" # Set via HELMFILE_RABBITMQ_PASSWORD or sealed secret
   persistence:
     size: 10Gi
 
 opensearch:
   version: "2.19.1"
   master:
-    replicaCount: 1
+    replicaCount: 3
   persistence:
     size: 50Gi
     storageClass: do-block-storage
   resources:
-    memory: 2Gi
-    cpu: "1"
-  jvm: "-Xms1g -Xmx1g"
+    memory: 1Gi
+    cpu: "300m"
+  jvm: "-Xms512m -Xmx512m"
   dashboards:
     enabled: true

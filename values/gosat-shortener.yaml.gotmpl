@@ -18,11 +18,21 @@ env:
 ingress:
   enabled: true
   className: nginx
+  {{- if .Values | get "tls.enabled" false }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values | get "tls.clusterIssuer" "letsencrypt-prod" }}
+  {{- end }}
   hosts:
     - host: {{ .Values | get "domain" "gosat.local" }}
       paths:
         - path: /l
           pathType: Prefix
+  {{- if .Values | get "tls.enabled" false }}
+  tls:
+    - secretName: gosat-tls
+      hosts:
+        - {{ .Values | get "domain" "gosat.local" }}
+  {{- end }}
 
 resources:
   limits:

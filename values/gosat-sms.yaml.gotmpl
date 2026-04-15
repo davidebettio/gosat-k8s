@@ -30,16 +30,26 @@ env:
 ingress:
   enabled: true
   className: nginx
+  {{- if .Values | get "tls.enabled" false }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values | get "tls.clusterIssuer" "letsencrypt-prod" }}
+  {{- end }}
   hosts:
     - host: {{ .Values | get "domain" "gosat.local" }}
       paths:
         - path: /sms
           pathType: Prefix
+  {{- if .Values | get "tls.enabled" false }}
+  tls:
+    - secretName: gosat-tls
+      hosts:
+        - {{ .Values | get "domain" "gosat.local" }}
+  {{- end }}
 
 resources:
   limits:
-    memory: 256Mi
-    cpu: 200m
+    memory: 128Mi
+    cpu: 100m
   requests:
-    memory: 64Mi
-    cpu: 50m
+    memory: 32Mi
+    cpu: 25m

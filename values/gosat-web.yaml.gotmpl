@@ -28,6 +28,9 @@ ingress:
   className: nginx
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    {{- if .Values | get "tls.enabled" false }}
+    cert-manager.io/cluster-issuer: {{ .Values | get "tls.clusterIssuer" "letsencrypt-prod" }}
+    {{- end }}
   hosts:
     - host: {{ .Values | get "domain" "gosat.local" }}
       paths:

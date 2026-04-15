@@ -48,6 +48,18 @@ releases:
     chart: ./charts/mongodb-community
     needs:
       - operators/mongodb-operator
+    hooks:
+      # OLM installs the operator asynchronously after the Subscription is
+      # applied; wait for the CRD to be Established before trying to apply
+      # the MongoDBCommunity CR.
+      - events: ["presync"]
+        showlogs: true
+        command: "kubectl"
+        args:
+          - "wait"
+          - "--for=condition=Established"
+          - "crd/mongodbcommunity.mongodbcommunity.mongodb.com"
+          - "--timeout=180s"
     values:
       - values/mongodb.yaml.gotmpl
 
@@ -83,6 +95,14 @@ releases:
     values:
       - values/opensearch.yaml.gotmpl
 
+  # One-shot bootstrap: applies the GoSat index template and creates the
+  # 'gosat-*' index pattern in OpenSearch Dashboards.
+  - name: opensearch-bootstrap
+    namespace: gosat
+    chart: ./charts/opensearch-bootstrap
+    needs:
+      - gosat/opensearch
+
   # Fluent Bit: ships container logs to OpenSearch
   - name: fluent-bit
     namespace: gosat
@@ -90,6 +110,7 @@ releases:
     version: "~0.49"
     needs:
       - gosat/opensearch
+      - gosat/opensearch-bootstrap
     values:
       - values/fluent-bit.yaml.gotmpl
 

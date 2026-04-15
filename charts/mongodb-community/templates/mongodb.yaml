@@ -30,6 +30,43 @@ spec:
             runAsGroup: 2000
             fsGroup: 2000
             fsGroupChangePolicy: OnRootMismatch
+          # Trim per-container resource requests so the whole pod fits on small
+          # nodes (DOKS s-2vcpu-4gb has ~1.9 CPU allocatable). The operator's
+          # defaults (500m per container × 2 main + 2 init) exceed node CPU.
+          containers:
+            - name: mongod
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 300Mi
+                limits:
+                  cpu: {{ .Values.resources.limits.cpu | default "1" }}
+                  memory: {{ .Values.resources.limits.memory | default "1Gi" }}
+            - name: mongodb-agent
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 100Mi
+                limits:
+                  cpu: 500m
+                  memory: 300Mi
+          initContainers:
+            - name: mongod-posthook
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 50Mi
+                limits:
+                  cpu: 200m
+                  memory: 100Mi
+            - name: mongodb-agent-readinessprobe
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 50Mi
+                limits:
+                  cpu: 200m
+                  memory: 100Mi
       volumeClaimTemplates:
         - metadata:
             name: data-volume

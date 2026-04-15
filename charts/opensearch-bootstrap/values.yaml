@@ -1,0 +1,20 @@
+opensearch:
+  host: opensearch.gosat.svc.cluster.local
+  port: 9200
+  adminSecret: opensearch-admin-password   # keys: username, password
+
+dashboards:
+  host: opensearch-dashboards.gosat.svc.cluster.local
+  port: 5601
+
+indexPattern:
+  id: gosat-star
+  title: gosat-*
+  timeFieldName: "@timestamp"
+
+image:
+  repository: curlimages/curl
+  tag: "8.10.1"
+
+# Helm hook so the Job re-runs on every helmfile sync
+hookWeight: "5"

@@ -11,17 +11,17 @@ cluster:
   dashboards:
     enable: {{ .Values | get "opensearch.dashboards.enabled" false }}
     version: {{ .Values | get "opensearch.version" "2.19.1" | quote }}
-    replicas: 1
+    replicas: {{ .Values | get "opensearch.dashboards.replicas" 1 }}
     tls:
       enable: false
       secret: {}
     resources:
       limits:
-        memory: 512Mi
-        cpu: 500m
+        memory: {{ .Values | get "opensearch.dashboards.resources.memory" "384Mi" }}
+        cpu: {{ .Values | get "opensearch.dashboards.resources.cpu" "200m" }}
       requests:
-        memory: 256Mi
-        cpu: 100m
+        memory: 128Mi
+        cpu: 50m
   nodePools:
     - component: masters
       replicas: {{ .Values | get "opensearch.master.replicaCount" 1 }}
@@ -33,7 +33,7 @@ cluster:
       resources:
         limits:
           memory: {{ .Values | get "opensearch.resources.memory" "1Gi" }}
-          cpu: {{ .Values | get "opensearch.resources.cpu" "500m" }}
+          cpu: {{ .Values | get "opensearch.resources.cpu" "250m" }}
         requests:
           memory: 512Mi
           cpu: 100m

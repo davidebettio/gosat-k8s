@@ -16,14 +16,17 @@ Deploy dell'intera piattaforma GoSat su Kubernetes con Helmfile.
 gosat-k8s/
 ├── helmfile.yaml.gotmpl                 # Orchestrator principale (Helmfile v1)
 ├── build.sh                             # Build di tutte le immagini Docker
-├── install-operators.sh                 # Installa OLM + RabbitMQ operator (una tantum)
+├── install-operators.sh                 # OLM + cert-manager + RabbitMQ operator (richiede dev|prod)
+├── teardown.sh                          # Distrugge release/CR/PVC di un env (richiede dev|prod)
+├── cluster-issuer.yaml                  # ClusterIssuer Let's Encrypt (prod + staging)
 ├── secrets-template.yaml                # Template secrets (da personalizzare)
 │
 ├── charts/
 │   ├── gosat-service/                   # Helm chart generico per tutti i microservizi
 │   ├── mongodb-community/               # MongoDBCommunity CR (replica set)
 │   ├── mongodb-olm/                     # MongoDB operator via OLM Subscription
-│   └── rabbitmq-cluster/                # RabbitmqCluster CR
+│   ├── rabbitmq-cluster/                # RabbitmqCluster CR
+│   └── opensearch-bootstrap/            # Job one-shot: index template + index pattern Dashboards
 │
 ├── dockerfiles/
 │   ├── Dockerfile.node                  # Per servizi Node.js/TypeScript
@@ -46,6 +49,7 @@ gosat-k8s/
 │   ├── rabbitmq.yaml.gotmpl            # RabbitMQ cluster config
 │   ├── opensearch.yaml.gotmpl          # OpenSearch cluster config
 │   ├── opensearch-operator.yaml.gotmpl # OpenSearch operator config
+│   ├── fluent-bit.yaml.gotmpl          # DaemonSet log shipper → OpenSearch
 │   └── ingress-nginx.yaml.gotmpl       # Ingress controller config
 │
 └── environments/
@@ -63,7 +67,9 @@ Nessuna dipendenza da Bitnami. Tutti i componenti usano operator/chart ufficiali
 | **Redis** | [Valkey](https://valkey.io/valkey-helm/) (Redis-compatible) | `valkey/valkey` |
 | **RabbitMQ** | [cluster-operator](https://github.com/rabbitmq/cluster-operator) | `rabbitmq` (ufficiale) |
 | **OpenSearch** | [opensearch-k8s-operator](https://github.com/opensearch-project/opensearch-k8s-operator) | `opensearchproject/opensearch` |
+| **Log shipping** | [Fluent Bit](https://fluent.io) (DaemonSet → OpenSearch) | `fluent/fluent-bit` |
 | **Ingress** | [ingress-nginx](https://kubernetes.github.io/ingress-nginx) | — |
+| **TLS / cert-manager** | [cert-manager](https://cert-manager.io) (Let's Encrypt HTTP-01) | — |
 
 ## Quick Start — Minikube (sviluppo locale)
 
@@ -75,8 +81,10 @@ minikube start --cpus=4 --memory=8192 --driver=docker
 minikube addons enable ingress
 
 # 3. Installa gli operator (una tantum per cluster)
+#    Lo script forza il context 'minikube', chiede conferma mostrando API
+#    server URL, e pinna ogni kubectl call a quel context.
 cd gosat-k8s
-./install-operators.sh
+./install-operators.sh dev
 
 # 4. Punta docker al daemon di minikube
 eval $(minikube docker-env)
@@ -120,8 +128,10 @@ doctl registry login
 doctl registry kubernetes-manifest | kubectl apply -f -
 
 # 5. Installa gli operator
+#    Lo script forza il context 'do-fra1-gosat1'. In CI passa ASSUME_YES=1
+#    per saltare il prompt interattivo.
 cd gosat-k8s
-./install-operators.sh
+./install-operators.sh prod
 ```
 
 ### Build e Deploy
@@ -139,36 +149,31 @@ kubectl -n gosat apply -f secrets.yaml
 # 3. Deploy
 helmfile -e production sync
 
-# 4. Setup DNS: punta web.gosat.it all'IP del LoadBalancer
-kubectl -n ingress-nginx get svc
+# 4. Setup DNS: punta il dominio (es. beta.gosat.it) all'IP del LoadBalancer
+kubectl -n ingress-nginx get svc ingress-nginx-controller \
+  -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 ```
 
 ### TLS con cert-manager
 
-```bash
-# Installa cert-manager
-helm repo add jetstack https://charts.jetstack.io
-helm install cert-manager jetstack/cert-manager \
-  --namespace cert-manager --create-namespace \
-  --set crds.enabled=true
+`cert-manager` è già installato da `install-operators.sh`. I ClusterIssuer
+Let's Encrypt (prod + staging) vivono in `cluster-issuer.yaml`:
 
-# Crea ClusterIssuer Let's Encrypt
-kubectl apply -f - <<EOF
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: letsencrypt-prod
-spec:
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    email: admin@gosat.it
-    privateKeySecretRef:
-      name: letsencrypt-prod
-    solvers:
-    - http01:
-        ingress:
-          class: nginx
-EOF
+```bash
+kubectl apply -f cluster-issuer.yaml
+```
+
+Gli ingress dei servizi aggiungono automaticamente l'annotation
+`cert-manager.io/cluster-issuer` quando `tls.enabled: true`
+(già attivo in `environments/production/values.yaml`). Il secret TLS
+condiviso tra tutti i servizi è `gosat-tls`.
+
+Per evitare rate limit durante i test, passa temporaneamente allo
+staging issuer aggiungendo in `environments/production/values.yaml`:
+```yaml
+tls:
+  enabled: true
+  clusterIssuer: letsencrypt-staging
 ```
 
 ## Build immagini
@@ -219,8 +224,11 @@ kubectl -n gosat port-forward svc/rabbitmq 5672:5672
 helmfile -e minikube status
 kubectl -n gosat get pods,svc,ingress
 
-# Distruggi tutto
-helmfile -e minikube destroy
+# Distruggi tutto (soft: preserva namespace + secrets applicativi)
+./teardown.sh dev
+
+# Distruggi tutto incluso namespace gosat
+./teardown.sh dev --nuke
 ```
 
 ## Architettura su K8s
@@ -246,6 +254,7 @@ Internal:
   All services ──→ MongoDB (operator, ReplicaSet)
                ──→ Valkey/Redis
                ──→ OpenSearch (operator)
+               ←── Fluent Bit DaemonSet (tail container logs → OpenSearch)
 ```
 
 ## Differenze tra ambienti
@@ -256,6 +265,7 @@ Internal:
 | Image pull | `Never` (buildate in minikube) | `IfNotPresent` |
 | Platform | `linux/arm64` (Apple Silicon) | `linux/amd64` |
 | Ingress | minikube addon | Helm chart + LoadBalancer |
-| TLS | No | Si (cert-manager + Let's Encrypt) |
+| TLS | No | Si (cert-manager + Let's Encrypt, secret `gosat-tls`) |
 | MongoDB | 1 replica, 5Gi | 3 repliche, 100Gi |
-| Dominio | `gosat.local` | `web.gosat.it` |
+| OpenSearch | 1 master, 5Gi | 3 master, 50Gi |
+| Dominio | `gosat.local` | `beta.gosat.it` |

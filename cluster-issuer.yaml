@@ -1,0 +1,38 @@
+# ClusterIssuer for Let's Encrypt production certs (HTTP-01 via ingress-nginx).
+#
+# Apply once per cluster:
+#   kubectl apply -f cluster-issuer.yaml
+#
+# Ingresses that need a cert must include this annotation:
+#   cert-manager.io/cluster-issuer: letsencrypt-prod
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@gosat.it
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+# Staging issuer — use while testing to avoid Let's Encrypt rate limits.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: admin@gosat.it
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
