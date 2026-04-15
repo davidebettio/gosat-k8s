@@ -12,6 +12,11 @@ indexPattern:
   title: gosat-*
   timeFieldName: "@timestamp"
 
+# Index State Management policy: drops gosat-* indices older than N days.
+retention:
+  enabled: true
+  days: 30
+
 image:
   repository: curlimages/curl
   tag: "8.10.1"

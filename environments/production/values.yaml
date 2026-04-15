@@ -43,13 +43,15 @@ rabbitmq:
 opensearch:
   version: "2.19.1"
   master:
-    replicaCount: 3
+    replicaCount: 1
   persistence:
     size: 50Gi
     storageClass: do-block-storage
   resources:
     memory: 1Gi
-    cpu: "300m"
+    cpu: "1"
   jvm: "-Xms512m -Xmx512m"
   dashboards:
     enabled: true
+  retention:
+      days: 30
