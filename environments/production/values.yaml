@@ -2,7 +2,7 @@
 
 # DigitalOcean Container Registry
 registry: registry.digitalocean.com/gosat
-imageTag: v0.0.1
+imageTag: v0.0.2
 domain: beta.gosat.it
 
 # TLS via cert-manager / Let's Encrypt
