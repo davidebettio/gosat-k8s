@@ -86,6 +86,10 @@ releases:
       - values/opensearch-operator.yaml.gotmpl
 
   # OpenSearch cluster (CR managed by the operator)
+  # NOTE: the operator writes some fields (tls durations) with its own SSA
+  # field-manager. On every sync helm fights for ownership, so sync this
+  # release with:
+  #   helmfile -e <env> -l name=opensearch sync --args "--force-conflicts"
   - name: opensearch
     namespace: gosat
     chart: opensearch-operator/opensearch-cluster
