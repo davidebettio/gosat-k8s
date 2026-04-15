@@ -25,7 +25,7 @@ mongodb:
   auth:
     enabled: true
   persistence:
-    size: 100Gi
+    size: 200Gi
     storageClass: do-block-storage
   resources:
     memory: 4Gi
