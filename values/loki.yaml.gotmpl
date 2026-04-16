@@ -1,0 +1,83 @@
+# Loki in monolithic (SingleBinary) mode — 1 pod, filesystem storage on a
+# DO block volume. Perfect for small clusters collecting application logs.
+# Retention is enforced by Loki's compactor.
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  # Disable the built-in ingester/querier split for SingleBinary.
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  # Retention: Loki compactor drops logs older than N days.
+  limits_config:
+    retention_period: {{ .Values | get "loki.retentionPeriod" "720h" }}   # 30d default
+    allow_structured_metadata: true
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: {{ .Values | get "loki.persistence.size" "20Gi" | quote }}
+    {{- if .Values | get "loki.persistence.storageClass" "" }}
+    storageClass: {{ .Values | get "loki.persistence.storageClass" "" | quote }}
+    {{- end }}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: {{ .Values | get "loki.resources.cpu" "500m" | quote }}
+      memory: {{ .Values | get "loki.resources.memory" "768Mi" | quote }}
+  extraArgs:
+    - "-config.expand-env=true"
+
+# Disable every distributed-mode component — we only run SingleBinary.
+read:     { replicas: 0 }
+write:    { replicas: 0 }
+backend:  { replicas: 0 }
+distributor:   { replicas: 0 }
+ingester:      { replicas: 0 }
+querier:       { replicas: 0 }
+queryFrontend: { replicas: 0 }
+queryScheduler: { replicas: 0 }
+indexGateway:  { replicas: 0 }
+compactor:     { replicas: 0 }
+ruler:         { replicas: 0 }
+bloomCompactor: { replicas: 0 }
+bloomGateway:   { replicas: 0 }
+
+# Minikube/DOKS: skip the self-monitoring subchart (it pulls extra deps).
+test:           { enabled: false }
+lokiCanary:     { enabled: false }
+monitoring:
+  dashboards:   { enabled: false }
+  rules:        { enabled: false }
+  serviceMonitor: { enabled: false }
+  selfMonitoring: { enabled: false, grafanaAgent: { installOperator: false } }
+
+# Tiny gateway for fluent-bit → loki-gateway:3100
+gateway:
+  enabled: true
+  replicas: 1
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }
+    limits:   { cpu: 100m, memory: 128Mi }
+
+# No chunksCache/resultsCache (SingleBinary doesn't need them).
+chunksCache:   { enabled: false }
+resultsCache:  { enabled: false }

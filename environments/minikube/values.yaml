@@ -44,17 +44,13 @@ rabbitmq:
   persistence:
     size: 1Gi
 
-opensearch:
-  version: "2.19.1"
-  master:
-    replicaCount: 1
-  data:
-    replicaCount: 0
+loki:
+  retentionPeriod: "168h"   # 7 days in dev
   persistence:
-    size: 5Gi
+    size: "5Gi"
     storageClass: standard
-  resources:
-    memory: 512Mi
-    cpu: 250m
-  dashboards:
-    enabled: false
+
+grafana:
+  persistence:
+    size: "1Gi"
+    storageClass: standard

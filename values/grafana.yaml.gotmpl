@@ -1,0 +1,83 @@
+# Grafana — single instance, Loki pre-provisioned as default datasource.
+# Admin password is injected from the gosat-grafana-secrets Secret (create
+# it via secrets.yaml). Ingress can be enabled to expose under a subpath.
+
+replicas: 1
+
+persistence:
+  enabled: true
+  size: {{ .Values | get "grafana.persistence.size" "2Gi" | quote }}
+  {{- if .Values | get "grafana.persistence.storageClass" "" }}
+  storageClassName: {{ .Values | get "grafana.persistence.storageClass" "" | quote }}
+  {{- end }}
+
+admin:
+  existingSecret: gosat-grafana-secrets
+  userKey: admin-user
+  passwordKey: admin-password
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 384Mi
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki-gateway.gosat.svc.cluster.local
+        isDefault: true
+        jsonData:
+          timeout: 60
+          maxLines: 1000
+
+grafana.ini:
+  server:
+    root_url: "%(protocol)s://%(domain)s/logs/"
+    serve_from_sub_path: true
+  analytics:
+    reporting_enabled: false
+    check_for_updates: false
+  auth.anonymous:
+    enabled: false
+  users:
+    allow_sign_up: false
+
+{{- if .Values | get "tls.enabled" false }}
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values | get "tls.clusterIssuer" "letsencrypt-prod" }}
+  hosts:
+    - {{ .Values | get "domain" "gosat.local" }}
+  path: /logs
+  tls:
+    - secretName: gosat-tls
+      hosts:
+        - {{ .Values | get "domain" "gosat.local" }}
+{{- else }}
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hosts:
+    - {{ .Values | get "domain" "gosat.local" }}
+  path: /logs
+{{- end }}
+
+# Let Grafana run unprivileged and persist plugins in a sidecar PVC.
+sidecar:
+  dashboards:
+    enabled: false
+  datasources:
+    enabled: false
+
+testFramework:
+  enabled: false

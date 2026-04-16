@@ -25,8 +25,7 @@ gosat-k8s/
 │   ├── gosat-service/                   # Helm chart generico per tutti i microservizi
 │   ├── mongodb-community/               # MongoDBCommunity CR (replica set)
 │   ├── mongodb-olm/                     # MongoDB operator via OLM Subscription
-│   ├── rabbitmq-cluster/                # RabbitmqCluster CR
-│   └── opensearch-bootstrap/            # Job one-shot: index template + index pattern Dashboards
+│   └── rabbitmq-cluster/                # RabbitmqCluster CR
 │
 ├── dockerfiles/
 │   ├── Dockerfile.node                  # Per servizi Node.js/TypeScript
@@ -47,9 +46,9 @@ gosat-k8s/
 │   ├── mongodb-operator.yaml.gotmpl    # MongoDB OLM operator config
 │   ├── redis.yaml.gotmpl               # Valkey (Redis-compatible)
 │   ├── rabbitmq.yaml.gotmpl            # RabbitMQ cluster config
-│   ├── opensearch.yaml.gotmpl          # OpenSearch cluster config
-│   ├── opensearch-operator.yaml.gotmpl # OpenSearch operator config
-│   ├── fluent-bit.yaml.gotmpl          # DaemonSet log shipper → OpenSearch
+│   ├── loki.yaml.gotmpl                # Loki SingleBinary config
+│   ├── grafana.yaml.gotmpl             # Grafana + Loki datasource + /logs ingress
+│   ├── fluent-bit.yaml.gotmpl          # DaemonSet log shipper → Loki
 │   └── ingress-nginx.yaml.gotmpl       # Ingress controller config
 │
 └── environments/
@@ -66,8 +65,8 @@ Nessuna dipendenza da Bitnami. Tutti i componenti usano operator/chart ufficiali
 | **MongoDB** | [mongodb-kubernetes](https://github.com/mongodb/mongodb-kubernetes) via OLM | `mongo` (ufficiale) |
 | **Redis** | [Valkey](https://valkey.io/valkey-helm/) (Redis-compatible) | `valkey/valkey` |
 | **RabbitMQ** | [cluster-operator](https://github.com/rabbitmq/cluster-operator) | `rabbitmq` (ufficiale) |
-| **OpenSearch** | [opensearch-k8s-operator](https://github.com/opensearch-project/opensearch-k8s-operator) | `opensearchproject/opensearch` |
-| **Log shipping** | [Fluent Bit](https://fluent.io) (DaemonSet → OpenSearch) | `fluent/fluent-bit` |
+| **Log storage + UI** | Loki (SingleBinary) + Grafana, Helm charts ufficiali Grafana | `grafana/loki`, `grafana/grafana` |
+| **Log shipping** | [Fluent Bit](https://fluent.io) (DaemonSet → Loki) | `fluent/fluent-bit` |
 | **Ingress** | [ingress-nginx](https://kubernetes.github.io/ingress-nginx) | — |
 | **TLS / cert-manager** | [cert-manager](https://cert-manager.io) (Let's Encrypt HTTP-01) | — |
 
@@ -253,8 +252,12 @@ Internal:
 
   All services ──→ MongoDB (operator, ReplicaSet)
                ──→ Valkey/Redis
-               ──→ OpenSearch (operator)
-               ←── Fluent Bit DaemonSet (tail container logs → OpenSearch)
+               ←── Fluent Bit DaemonSet (tail container logs → Loki)
+                                                                │
+                                                                ▼
+                                                   Loki (monolithic, PVC)
+                                                      ▲
+                                         Grafana ─────┘   (/logs/ behind ingress)
 ```
 
 ## Differenze tra ambienti
@@ -267,5 +270,5 @@ Internal:
 | Ingress | minikube addon | Helm chart + LoadBalancer |
 | TLS | No | Si (cert-manager + Let's Encrypt, secret `gosat-tls`) |
 | MongoDB | 1 replica, 5Gi | 3 repliche, 100Gi |
-| OpenSearch | 1 master, 5Gi | 3 master, 50Gi |
+| Loki retention | 7 giorni, 5Gi | 30 giorni, 20Gi |
 | Dominio | `gosat.local` | `beta.gosat.it` |

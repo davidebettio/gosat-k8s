@@ -95,7 +95,6 @@ echo ""
 echo "→ Removing operator-managed custom resources..."
 $KUBECTL -n gosat delete mongodbcommunity --all --ignore-not-found
 $KUBECTL -n gosat delete rabbitmqcluster --all --ignore-not-found
-$KUBECTL -n gosat delete opensearchcluster --all --ignore-not-found
 
 echo ""
 echo "→ Removing PVCs..."
@@ -104,9 +103,6 @@ $KUBECTL -n gosat delete pvc --all --ignore-not-found
 echo ""
 echo "→ Removing operator-generated secrets..."
 $KUBECTL -n gosat delete secret \
-  opensearch-admin-password opensearch-admin-cert opensearch-ca \
-  opensearch-dashboards-password opensearch-http-cert \
-  opensearch-security-config-generated opensearch-transport-cert \
   mongodb-gosat-password mongodb-gosat-scram mongodb-config \
   rabbitmq-default-user rabbitmq-erlang-cookie rabbitmq-server-conf \
   --ignore-not-found

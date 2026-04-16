@@ -1,18 +1,5 @@
 # Fluent Bit DaemonSet — tails container logs in the gosat namespace and
-# ships them to OpenSearch. Credentials come from the opensearch-admin-password
-# secret created by the OpenSearch operator (keys: username, password).
-
-env:
-  - name: OPENSEARCH_USERNAME
-    valueFrom:
-      secretKeyRef:
-        name: opensearch-admin-password
-        key: username
-  - name: OPENSEARCH_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: opensearch-admin-password
-        key: password
+# ships them to Loki via its HTTP gateway. No auth required (cluster-local).
 
 config:
   service: |
@@ -42,26 +29,31 @@ config:
         Name                kubernetes
         Match               kube.*
         Merge_Log           On
-        Merge_Log_Key       log_processed
         Keep_Log            Off
         K8S-Logging.Parser  On
         K8S-Logging.Exclude On
 
+    # Promote kubernetes sub-fields to top level so Label_keys can see them
+    # as simple record accessors ($namespace, $pod, $container).
+    [FILTER]
+        Name    nest
+        Match   kube.*
+        Operation   lift
+        Nested_under  kubernetes
+        Add_prefix    k8s_
+
+  # Ship to Loki. Labels are what you'll filter on in Grafana;
+  # keep the set small — Loki suffers (perf-wise) with high-cardinality labels.
   outputs: |
     [OUTPUT]
-        Name                 opensearch
-        Match                kube.*
-        Host                 opensearch.gosat.svc.cluster.local
-        Port                 9200
-        HTTP_User            ${OPENSEARCH_USERNAME}
-        HTTP_Passwd          ${OPENSEARCH_PASSWORD}
-        tls                  On
-        tls.verify           Off
-        Logstash_Format      On
-        Logstash_Prefix      gosat
-        Suppress_Type_Name   On
-        Trace_Error          On
-        Retry_Limit          False
+        Name                   loki
+        Match                  kube.*
+        Host                   loki-gateway.gosat.svc.cluster.local
+        Port                   80
+        Labels                 job=fluent-bit
+        Label_keys             $k8s_namespace_name,$k8s_pod_name,$k8s_container_name,$service,$level
+        Line_format            json
+        Auto_kubernetes_labels false
 
   customParsers: |
     [PARSER]

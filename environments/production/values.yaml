@@ -14,9 +14,9 @@ ingress:
   enabled: true
   serviceType: LoadBalancer
 
-# gosat-server: traffic arrives via ingress-nginx TCP proxy
+# gosat-server: dedicated DigitalOcean LoadBalancer on TCP 30060 for device traffic
 gosat-server:
-  serviceType: ClusterIP
+  serviceType: LoadBalancer
 
 # Infrastructure: production sizing
 mongodb:
@@ -40,18 +40,16 @@ rabbitmq:
   persistence:
     size: 10Gi
 
-opensearch:
-  version: "2.19.1"
-  master:
-    replicaCount: 1
+loki:
+  retentionPeriod: "720h"   # 30 days
   persistence:
-    size: 50Gi
+    size: "20Gi"
     storageClass: do-block-storage
   resources:
-    memory: 1Gi
-    cpu: "1"
-  jvm: "-Xms512m -Xmx512m"
-  dashboards:
-    enabled: true
-  retention:
-      days: 30
+    cpu: "500m"
+    memory: "768Mi"
+
+grafana:
+  persistence:
+    size: "2Gi"
+    storageClass: do-block-storage
